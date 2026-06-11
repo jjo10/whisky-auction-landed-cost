@@ -57,13 +57,14 @@ The zip also contains `INSTALL.txt` with these same steps.
 
 No build step — it's plain JS loaded directly.
 
-### Releasing a new version
+### Releasing
 
-1. Bump `version` in `manifest.json`.
-2. Commit, then tag and push: `git tag v<version> && git push origin main v<version>`.
-3. GitHub Actions ([release.yml](.github/workflows/release.yml)) runs the test suites,
-   builds the zip with `node tools/package.mjs`, and publishes the GitHub Release with
-   install instructions. The tag must match the manifest version or the workflow fails.
+Releases are automatic: every push to `main` that passes the test suites is packaged
+(`node tools/package.mjs`) and published by [release.yml](.github/workflows/release.yml).
+The release is tagged from `manifest.json`'s version — bump it to cut a new numbered
+release; pushes without a bump refresh the current release's zip in place. Either way,
+the [latest release](https://github.com/jjo10/whisky-auction-landed-cost/releases/latest)
+always carries the newest passing build.
 
 ## Using it
 

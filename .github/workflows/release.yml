@@ -1,13 +1,16 @@
 name: Release
 
-# Cut a release by pushing a version tag that matches manifest.json:
-#   git tag v1.2.0 && git push origin v1.2.0
-# The workflow runs the test suites, packages the extension zip, and publishes
-# a GitHub Release with non-technical install instructions as the body.
+# Every push to main that passes the test suites automatically publishes a
+# GitHub Release of the packaged extension. The release is tagged from
+# manifest.json's version:
+#   - new version  -> a new release is created (and tagged)
+#   - same version -> the existing release's zip and notes are refreshed
+# So the latest release always carries the newest passing build, and bumping
+# manifest.json is the only step needed to cut a new numbered release.
 
 on:
   push:
-    tags: ['v*']
+    branches: [main]
 
 permissions:
   contents: write
@@ -22,15 +25,6 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Tag must match manifest version
-        run: |
-          MANIFEST_V=$(node -p "require('./manifest.json').version")
-          TAG_V="${GITHUB_REF_NAME#v}"
-          if [ "$MANIFEST_V" != "$TAG_V" ]; then
-            echo "Tag v$TAG_V does not match manifest.json version $MANIFEST_V" >&2
-            exit 1
-          fi
-
       - name: Run test suites
         run: |
           node test/calc.test.mjs
@@ -39,10 +33,19 @@ jobs:
       - name: Package extension
         run: node tools/package.mjs
 
-      - name: Publish GitHub Release
+      - name: Publish or refresh release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" dist/*.zip \
-            --title "Whisky Auction Landed-Cost Calculator $GITHUB_REF_NAME" \
-            --notes-file dist/RELEASE_NOTES.md
+          TAG="v$(node -p "require('./manifest.json').version")"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Refreshing existing release $TAG"
+            gh release upload "$TAG" dist/*.zip --clobber
+            gh release edit "$TAG" --notes-file dist/RELEASE_NOTES.md
+          else
+            echo "Creating release $TAG"
+            gh release create "$TAG" dist/*.zip \
+              --target "$GITHUB_SHA" \
+              --title "Whisky Auction Landed-Cost Calculator $TAG" \
+              --notes-file dist/RELEASE_NOTES.md
+          fi
