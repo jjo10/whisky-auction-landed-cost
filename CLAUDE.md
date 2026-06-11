@@ -72,6 +72,12 @@ Script load order (fixed in `manifest.json`, all attach to the `WA` global):
   the plural account labels, then take the first currency figure after the label.
 - **AWA spec fields need a newline anchor.** `DISTILLERY / BRAND:` values must be matched
   with `label:\n value` — the bare word "distillery" appears earlier in description prose.
+- **Boot parse must retry — AWA hydrates the bid after `document_idle`.** Specs are
+  server-rendered but the bid arrives client-side later, so a single boot-time parse
+  shows an empty bid until the user clicks re-scan. `startParseRetries()` re-parses with
+  backoff (~12 s budget), filling only still-empty fields so user-typed values are never
+  overwritten. `preview/awa.html` injects its bid block 700 ms late to keep this path
+  exercised.
 - **`boot()` is invoked at the very end of the content.js IIFE.** The storage callback can
   fire synchronously in the preview harness; calling mount earlier hits the TDZ on
   `let root, host`.

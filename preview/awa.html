@@ -15,7 +15,15 @@
   <div class="fake-page">
     <h1>WILLIAM LARUE WELLER ANTIQUE COLLECTION KENTUCKY STRAIGHT BOURBON 2016 RELEASE</h1>
     <p>The record price was $17,000 at a charity event. Please examine the images.</p>
-    <p>Final Bid:<br><span class="bid">$1905.00</span><br>Reserve Met</p>
+    <!-- The real site hydrates the bid client-side AFTER document_idle (specs are
+         server-rendered, the bid is not). The harness reproduces that so the
+         content script's parse-retry path is exercised on every preview run. -->
+    <p id="bid-slot"></p>
+    <script>
+      setTimeout(function () {
+        document.getElementById('bid-slot').innerHTML = 'Final Bid:<br><span class="bid">$1905.00</span><br>Reserve Met';
+      }, 700);
+    </script>
     <p class="spec">DISTILLERY / BRAND:<br>Buffalo Trace</p>
     <p class="spec">SIZE:<br>750ml</p>
     <p class="spec">STRENGTH:<br>67.70%</p>
@@ -35,14 +43,14 @@
       runtime: { lastError: null, sendMessage: () => {}, onMessage: { addListener: () => {} } },
     };
   </script>
-  <script src="../src/calc.js?v=12"></script>
-  <script src="../src/parser.js?v=12"></script>
-  <script src="../src/sites.js?v=12"></script>
+  <script src="../src/calc.js?v=13"></script>
+  <script src="../src/parser.js?v=13"></script>
+  <script src="../src/sites.js?v=13"></script>
   <!-- Force the Australian Whisky Auctions (domestic) site, since the preview
        host is localhost rather than the real domain. -->
   <script>
     window.WA.pickSite = function () { return window.WA.sites['australianwhiskyauctions.com.au']; };
   </script>
-  <script src="../src/content.js?v=12"></script>
+  <script src="../src/content.js?v=13"></script>
 </body>
 </html>

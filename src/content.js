@@ -46,7 +46,45 @@
       render();
       fetchLiveFX(); // best-effort; updates FX field when it returns
       observeSpaNavigation();
+      startParseRetries(); // AWA hydrates the bid after document_idle — re-parse until complete
     });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Some sites (AWA) render the bid client-side after document_idle, so the
+  // boot-time parse can miss it. Retry with backoff, filling ONLY fields that
+  // are still empty — never overwriting values the user has typed — until the
+  // listing is complete or attempts run out (~12 s).
+  // ---------------------------------------------------------------------------
+  const RETRY_DELAYS = [400, 800, 1600, 3200, 6400];
+  let retryTimer = null;
+  function listingIncomplete() {
+    return listing.bid == null || listing.volumeL == null || listing.abv == null;
+  }
+  function startParseRetries() {
+    clearTimeout(retryTimer);
+    let attempt = 0;
+    const tick = () => {
+      if (!listingIncomplete()) return;
+      const p = site.parse() || {};
+      let changed = false;
+      for (const k of ['title', 'bid', 'volumeL', 'abv', 'year', 'distillery', 'lotRegion', 'origin']) {
+        if ((listing[k] == null || listing[k] === '') && p[k] != null && p[k] !== '') {
+          listing[k] = p[k];
+          changed = true;
+        }
+      }
+      if (p.isListing && !listing.isListing) { listing.isListing = true; changed = true; }
+      if (changed && !collapsed) {
+        // A full render would steal focus mid-typing; recompute totals only then.
+        if (root.activeElement) liveRecompute();
+        else render();
+      }
+      if (listingIncomplete() && attempt < RETRY_DELAYS.length) {
+        retryTimer = setTimeout(tick, RETRY_DELAYS[attempt++]);
+      }
+    };
+    retryTimer = setTimeout(tick, RETRY_DELAYS[attempt++]);
   }
 
   function rescan() {
@@ -331,7 +369,7 @@
   function wireEvents() {
     const $ = (id) => root.getElementById(id);
 
-    $('rescan').onclick = () => { rescan(); render(); fetchLiveFX(); };
+    $('rescan').onclick = () => { rescan(); render(); fetchLiveFX(); startParseRetries(); };
     $('collapse').onclick = () => { collapsed = true; render(); };
     $('assumeToggle').onclick = () => { showAssumptions = !showAssumptions; render(); };
 
@@ -467,7 +505,7 @@
   function observeSpaNavigation() {
     let last = location.href;
     const check = () => {
-      if (location.href !== last) { last = location.href; setTimeout(() => { rescan(); if (!collapsed) render(); }, 600); }
+      if (location.href !== last) { last = location.href; setTimeout(() => { rescan(); if (!collapsed) render(); startParseRetries(); }, 600); }
     };
     setInterval(check, 1000);
   }
