@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Preview — AWA domestic panel</title>
+  <style>
+    body { margin: 0; font-family: -apple-system, system-ui, sans-serif; background: #eef1f4; color: #333; }
+    .fake-page { max-width: 760px; margin: 40px auto; padding: 30px; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.08); }
+    .spec { color: #555; } .bid { font-size: 22px; font-weight: 800; }
+  </style>
+</head>
+<body>
+  <!-- Mirrors a real Australian Whisky Auctions lot (lot-681621). -->
+  <div class="fake-page">
+    <h1>WILLIAM LARUE WELLER ANTIQUE COLLECTION KENTUCKY STRAIGHT BOURBON 2016 RELEASE</h1>
+    <p>The record price was $17,000 at a charity event. Please examine the images.</p>
+    <p>Final Bid:<br><span class="bid">$1905.00</span><br>Reserve Met</p>
+    <p class="spec">DISTILLERY / BRAND:<br>Buffalo Trace</p>
+    <p class="spec">SIZE:<br>750ml</p>
+    <p class="spec">STRENGTH:<br>67.70%</p>
+    <p>...as evidenced by the ABV of 67.70%.</p>
+  </div>
+
+  <script>
+    window.__bootError = null;
+    window.addEventListener('error', (e) => { window.__bootError = (e.error && e.error.stack) || e.message; });
+    var __store = {};
+    window.chrome = {
+      storage: { local: {
+        get: (keys, cb) => { var o = {}; (Array.isArray(keys) ? keys : [keys]).forEach(k => { if (k in __store) o[k] = __store[k]; }); cb(o); },
+        set: (obj, cb) => { Object.assign(__store, obj); if (cb) cb(); },
+        remove: (keys, cb) => { (Array.isArray(keys) ? keys : [keys]).forEach(k => delete __store[k]); if (cb) cb(); },
+      } },
+      runtime: { lastError: null, sendMessage: () => {}, onMessage: { addListener: () => {} } },
+    };
+  </script>
+  <script src="../src/calc.js?v=12"></script>
+  <script src="../src/parser.js?v=12"></script>
+  <script src="../src/sites.js?v=12"></script>
+  <!-- Force the Australian Whisky Auctions (domestic) site, since the preview
+       host is localhost rather than the real domain. -->
+  <script>
+    window.WA.pickSite = function () { return window.WA.sites['australianwhiskyauctions.com.au']; };
+  </script>
+  <script src="../src/content.js?v=12"></script>
+</body>
+</html>

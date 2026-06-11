@@ -1,0 +1,94 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## What this is
+
+A Manifest V3 Chrome extension (plain JS, no build step, no dependencies) that estimates
+the AUD landed cost of whisky auction lots for a buyer in NSW, Australia. Multi-site:
+each auction site gets the cost model matching where the lot physically sits — the whole
+point on the import side is the UK/EU routing arbitrage (carry the bottle home through
+the customs territory the lot already sits in to avoid Australian import tax).
+
+## Commands
+
+```bash
+node test/calc.test.mjs     # cost-engine checks (both models) — must stay green
+node test/parser.test.mjs   # per-site extraction checks against realistic DOM text
+node --check src/<file>.js  # syntax check (files are browser globals, not modules)
+node tools/make-icons.mjs   # regenerate icons/icon{16,48,128}.png
+python3 -m http.server 8731 # serve repo root for the preview harnesses
+```
+
+There is no test runner — each test file is a self-contained script that exits non-zero on
+failure. Run both files; there is no way to run a single named test.
+
+Manual testing: load unpacked via `chrome://extensions` → Developer mode → Load unpacked.
+After changing `src/`, the extension must be reloaded (↻ on the card) AND the lot page
+refreshed.
+
+## Architecture
+
+Script load order (fixed in `manifest.json`, all attach to the `WA` global):
+`calc.js` → `parser.js` → `sites.js` → `content.js`.
+
+- **`src/sites.js`** — registry mapping hostname → `{ kind, currency, parse }`.
+  `kind: 'import'` (lot overseas, GBP, 3 routing scenarios) or `'domestic'` (lot already
+  in AU, AUD, single delivered cost). `content.js` calls `WA.pickSite(location.hostname)`
+  once at boot and everything else (cost model, panel layout, persisted-settings key,
+  whether FX is fetched) branches off `site.kind`.
+- **`src/calc.js`** — pure cost engine, dual-exported (browser global + `module.exports`)
+  so tests run headless in Node. `compute()` is the import model; `computeDomestic()` the
+  domestic one. Scenarios carry flags the UI filters on: `crossBorder` (staging the lot
+  across the Brexit border — always wipes the saving) and `overAllowance` (lot volume
+  exceeds the 2.25 L per-adult carry concession). All rates are date-stamped in
+  `DEFAULTS` / `DOMESTIC_DEFAULTS`; AU excise re-indexes every Feb and Aug.
+- **`src/parser.js`** — per-site extraction (`WA.parsers.{whiskyauctioneer,awa}`),
+  deliberately defensive: a parse miss leaves a blank field for manual entry, never a
+  wrong silent number.
+- **`src/content.js`** — injected shadow-DOM panel (style-isolated from the host page).
+  Site-aware rendering; `liveRecompute()` rewrites only the scenario cards so typing in an
+  input doesn't lose focus.
+- **`src/background.js`** — service worker that fetches live GBP→AUD/EUR FX from
+  Frankfurter (done here to avoid the page's connect-src CSP).
+
+## Invariants (each one was a real bug)
+
+- **Persist only user overrides, never defaults.** `content.js` stores just the rates the
+  user explicitly changed (`wa_overrides_<kind>`), layered over code defaults at load.
+  Persisting the whole assumptions object froze stale defaults in `chrome.storage` and
+  shadowed every later rate update. Live FX results are in-memory only, and never
+  overwrite a manual FX override.
+- **Bid parsing anchors on price labels, never proximity.** A logged-in user's account bar
+  ("Winning 1 £110.00", "Winning bids", "My bid £0.00") hijacked a loose "£ near 'bid'"
+  search. Parsers match `current bid`/`final bid`/`winning bid` with `(?!s)` to exclude
+  the plural account labels, then take the first currency figure after the label.
+- **AWA spec fields need a newline anchor.** `DISTILLERY / BRAND:` values must be matched
+  with `label:\n value` — the bare word "distillery" appears earlier in description prose.
+- **`boot()` is invoked at the very end of the content.js IIFE.** The storage callback can
+  fire synchronously in the preview harness; calling mount earlier hits the TDZ on
+  `let root, host`.
+- **Worked-example tests pin the brief's inputs explicitly** (11% premium, 2% insurance)
+  so changing production defaults (confirmed: 12.5% premium, 4%-of-hammer insurance)
+  doesn't break validation against the original spec targets.
+
+## Preview harnesses (verify changes without the extension)
+
+`preview/index.html` (Whisky Auctioneer / import) and `preview/awa.html` (Australian
+Whisky Auctions / domestic) mount the real content script over a mock listing with stubbed
+`chrome.*` APIs. `awa.html` overrides `WA.pickSite` since the preview host is localhost.
+Script tags use `?v=N` cache-busters — **bump N in both files whenever you edit `src/`**,
+or the browser serves stale JS (this has produced convincing-but-false test results).
+The panel lives in a closed world: query it via
+`document.getElementById('wa-landed-cost-host').shadowRoot`.
+
+The real sites are bot-protected (HTTP 406 to curl/WebFetch); validating parsers against
+live pages requires a real browser session (Claude-in-Chrome MCP). Both parsers have been
+validated against the real rendered DOM — preserve that bar when touching them.
+
+## Adding a site
+
+1. Parser in `src/parser.js` returning `{ title, bid, volumeL, abv, origin, currency, isListing, … }`; register in `WA.parsers`.
+2. Entry in `src/sites.js` (pick `import` or `domestic` kind).
+3. Host pattern in `manifest.json` `content_scripts.matches`.
+4. Test cases in `test/parser.test.mjs` mirroring the site's real DOM text, and a preview harness if the layout differs.

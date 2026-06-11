@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Preview — landed-cost panel</title>
+  <style>
+    body { margin: 0; font-family: -apple-system, system-ui, sans-serif; background: #eef1f4; color: #333; }
+    .fake-page { max-width: 760px; margin: 40px auto; padding: 30px; background: #fff; border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.08); }
+    .region-badge { display: inline-block; background: #ffce00; color: #003399; font-weight: 700;
+      padding: 3px 10px; border-radius: 6px; font-size: 13px; }
+    .bid { font-size: 22px; font-weight: 800; }
+    .muted { color: #888; }
+  </style>
+</head>
+<body>
+  <!-- Mirrors the live lot 8207436: specs as separate inline tokens (no slash
+       block) and an "EU Auction" badge — the real DOM shape the parser must handle. -->
+  <!-- Account chrome a logged-in user sees — the £110 that hijacked the bid. -->
+  <div style="background:#2a0d12;color:#fff;padding:6px 16px;font-size:13px;text-align:right">
+    Winning 1 £110.00 &nbsp; Sold 0 £0.00
+  </div>
+  <div class="fake-page">
+    <h1>William Larue Weller Straight Bourbon 2016 Release</h1>
+    <p class="muted"><a href="#">Sazerac Company</a></p>
+    <p class="specs">New Oak &nbsp; 2016 &nbsp; 67.7% &nbsp; 75cl</p>
+    <span class="badge-pill region-badge">EU Auction</span>
+    <p>Current bid</p>
+    <p class="bid">£800.00</p>
+    <p class="muted">My bid £0.00 · My limit £0.00 · Bids 31</p>
+  </div>
+
+  <!-- Capture any uncaught boot error so the preview harness can surface it. -->
+  <script>
+    window.__bootError = null;
+    window.addEventListener('error', (e) => { window.__bootError = (e.error && e.error.stack) || e.message; });
+  </script>
+  <!-- Stub the chrome.* APIs the content script expects. -->
+  <script>
+    // Seed storage with a LEGACY whole-object blob (insurance 2%, old A$25 ship)
+    // to reproduce the "persisted defaults shadow new defaults" bug. The new code
+    // reads only `wa_overrides` (absent here) and removes the legacy key, so the
+    // panel must show the current code defaults (insurance 4%).
+    var __store = { wa_assumptions: { insuranceRate: 0.02, premiumRate: 0.125, domesticShipAUD: 25, fxGBPAUD: 1.875 } };
+    window.chrome = {
+      storage: { local: {
+        get: (keys, cb) => { var o = {}; (Array.isArray(keys) ? keys : [keys]).forEach(k => { if (k in __store) o[k] = __store[k]; }); cb(o); },
+        set: (obj, cb) => { Object.assign(__store, obj); if (cb) cb(); },
+        remove: (keys, cb) => { (Array.isArray(keys) ? keys : [keys]).forEach(k => delete __store[k]); if (cb) cb(); },
+      } },
+      runtime: {
+        lastError: null,
+        sendMessage: (msg, cb) => { if (cb) cb({ ok: true, fxGBPAUD: 1.875, fxEURAUD: 1.66, date: '2026-06-06' }); },
+        onMessage: { addListener: () => {} },
+      },
+    };
+  </script>
+  <script src="../src/calc.js?v=12"></script>
+  <script src="../src/parser.js?v=12"></script>
+  <script src="../src/sites.js?v=12"></script>
+  <script src="../src/content.js?v=12"></script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "Whisky Auction Landed-Cost Calculator (AU)",
+  "version": "1.1.0",
+  "description": "Estimates the AUD landed cost of whisky auction lots for an Australian buyer. Whisky Auctioneer: import stack across Direct / via UK / via EU. Australian Whisky Auctions: domestic delivered cost.",
+  "permissions": ["storage"],
+  "host_permissions": ["https://api.frankfurter.app/*"],
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.whiskyauctioneer.com/*",
+        "*://*.australianwhiskyauctions.com.au/*"
+      ],
+      "js": ["src/calc.js", "src/parser.js", "src/sites.js", "src/content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_title": "Whisky Auctioneer Landed-Cost Calculator (AU)"
+  }
+}
