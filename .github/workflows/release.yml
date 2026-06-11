@@ -1,0 +1,48 @@
+name: Release
+
+# Cut a release by pushing a version tag that matches manifest.json:
+#   git tag v1.2.0 && git push origin v1.2.0
+# The workflow runs the test suites, packages the extension zip, and publishes
+# a GitHub Release with non-technical install instructions as the body.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Tag must match manifest version
+        run: |
+          MANIFEST_V=$(node -p "require('./manifest.json').version")
+          TAG_V="${GITHUB_REF_NAME#v}"
+          if [ "$MANIFEST_V" != "$TAG_V" ]; then
+            echo "Tag v$TAG_V does not match manifest.json version $MANIFEST_V" >&2
+            exit 1
+          fi
+
+      - name: Run test suites
+        run: |
+          node test/calc.test.mjs
+          node test/parser.test.mjs
+
+      - name: Package extension
+        run: node tools/package.mjs
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/*.zip \
+            --title "Whisky Auction Landed-Cost Calculator $GITHUB_REF_NAME" \
+            --notes-file dist/RELEASE_NOTES.md

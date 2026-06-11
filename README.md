@@ -36,15 +36,34 @@ the saving.
 > **Rule the tool surfaces:** carry it back via whichever region the lot already sits in.
 > EU lot → route through the EU. UK lot → route through the UK.
 
-## Install (load unpacked)
+## Install
 
-1. `chrome://extensions`
-2. Toggle **Developer mode** (top-right).
-3. **Load unpacked** → select this folder.
-4. Open any supported lot page (Whisky Auctioneer or Australian Whisky Auctions). A 🥃
-   panel appears bottom-right (drag the header to move it, `—` to collapse to a button).
+### Easiest — from a release (no technical knowledge needed)
+
+1. Go to the [latest release](https://github.com/jjo10/whisky-auction-landed-cost/releases/latest)
+   and download the `whisky-auction-landed-cost-v….zip` file.
+2. Double-click the zip to unzip it — you'll get a `whisky-auction-landed-cost` folder.
+3. In Chrome, go to `chrome://extensions`, turn on **Developer mode** (top-right switch),
+   click **Load unpacked**, and select that folder.
+4. Open any supported lot page — the 🥃 panel appears bottom-right (drag the header to
+   move it, `—` to collapse). Keep the folder where it is after installing.
+
+The zip also contains `INSTALL.txt` with these same steps.
+
+### From source (development)
+
+1. Clone this repo.
+2. `chrome://extensions` → **Developer mode** → **Load unpacked** → select the repo folder.
 
 No build step — it's plain JS loaded directly.
+
+### Releasing a new version
+
+1. Bump `version` in `manifest.json`.
+2. Commit, then tag and push: `git tag v<version> && git push origin main v<version>`.
+3. GitHub Actions ([release.yml](.github/workflows/release.yml)) runs the test suites,
+   builds the zip with `node tools/package.mjs`, and publishes the GitHub Release with
+   install instructions. The tag must match the manifest version or the workflow fails.
 
 ## Using it
 
