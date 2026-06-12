@@ -227,6 +227,11 @@
   //    so it can't be carried in tax-free; posted (Direct) treatment applies.
   // Shared by render() and liveRecompute() so a typed volume re-filters live.
   function scenariosHTML(result) {
+    // No bid parsed or typed → any total would just be fees/shipping on a £0/A$0
+    // hammer (e.g. "A$14 delivered" on a browse page). Prompt for a bid instead.
+    if (listing.bid == null) {
+      return `<div class="no-bid">Enter your max bid above to see the estimated ${isImport ? 'landed' : 'delivered'} cost.</div>`;
+    }
     const visible = result.scenarios.filter((s) => !s.crossBorder && !s.overAllowance);
     const sorted = visible.slice().sort((a, b) => a.total - b.total);
     const directS = result.scenarios.find((s) => s.id === 'direct'); // absent in the domestic model
@@ -595,6 +600,8 @@
     .seg button.on { background: #14181d; color: #fff; border-color: #14181d; }
     .scenarios { padding: 6px 14px 4px; display: flex; flex-direction: column; gap: 8px; }
     .over-note { padding: 8px 10px; background: #fff5e0; border: 1px solid #f0d48a; color: #7a5a00; border-radius: 8px; font-size: 11px; line-height: 1.45; }
+    .no-bid { padding: 14px 10px; border: 1px dashed #d6dbe0; border-radius: 11px; color: #8b949c;
+      font-size: 11.5px; font-weight: 600; text-align: center; }
     .card { border: 1px solid #e3e7eb; border-radius: 11px; overflow: hidden; }
     .card.best { border-color: #1f7a4d; box-shadow: 0 0 0 2px rgba(31,122,77,.16); }
     .card-head { display: flex; align-items: flex-start; justify-content: space-between; padding: 10px 12px 4px; cursor: pointer; }

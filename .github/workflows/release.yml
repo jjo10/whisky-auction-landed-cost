@@ -29,6 +29,7 @@ jobs:
         run: |
           node test/calc.test.mjs
           node test/parser.test.mjs
+          node test/content.test.mjs
 
       - name: Package extension
         run: node tools/package.mjs
